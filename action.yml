@@ -172,64 +172,59 @@ runs:
           echo "$1" | tr ',' '\n' | awk 'NF{printf "\"%s\", ", $0}' | sed 's/, $//'
         }
 
-        cat > "$CFG" <<EOF
-        [info]
-        ${{ inputs.relay_url != '' && format('relay_url = "{0}"', inputs.relay_url) || '# relay_url not set' }}
-        name = "${{ inputs.name }}"
-        ${{ inputs.description != '' && format('description = "{0}"', inputs.description) || '# description not set' }}
-        ${{ inputs.pubkey != '' && format('pubkey = "{0}"', inputs.pubkey) || '# pubkey not set' }}
-        ${{ inputs.contact != '' && format('contact = "{0}"', inputs.contact) || '# contact not set' }}
+        {
+          echo '[info]'
+          ${{ inputs.relay_url != '' && format('echo ''relay_url = "{0}"''', inputs.relay_url) || 'true' }}
+          echo 'name = "${{ inputs.name }}"'
+          ${{ inputs.description != '' && format('echo ''description = "{0}"''', inputs.description) || 'true' }}
+          ${{ inputs.pubkey != '' && format('echo ''pubkey = "{0}"''', inputs.pubkey) || 'true' }}
+          ${{ inputs.contact != '' && format('echo ''contact = "{0}"''', inputs.contact) || 'true' }}
 
-        [network]
-        port = ${{ inputs.port }}
-        address = "${{ inputs.address }}"
+          echo ''
+          echo '[network]'
+          echo 'port = ${{ inputs.port }}'
+          echo 'address = "${{ inputs.address }}"'
 
-        [database]
-        data_directory = "/tmp/nostr-relay-data"
-        engine = "${{ inputs.db_engine }}"
-        in_memory = ${{ inputs.db_in_memory }}
-        min_conn = ${{ inputs.db_min_conn }}
-        max_conn = ${{ inputs.db_max_conn }}
+          echo ''
+          echo '[database]'
+          echo 'data_directory = "/tmp/nostr-relay-data"'
+          echo 'engine = "${{ inputs.db_engine }}"'
+          echo 'in_memory = ${{ inputs.db_in_memory }}'
+          echo 'min_conn = ${{ inputs.db_min_conn }}'
+          echo 'max_conn = ${{ inputs.db_max_conn }}'
 
-        [limits]
-        max_event_bytes = ${{ inputs.max_event_bytes }}
-        max_ws_message_bytes = ${{ inputs.max_ws_message_bytes }}
-        max_ws_frame_bytes = ${{ inputs.max_ws_frame_bytes }}
-        limit_scrapers = ${{ inputs.limit_scrapers }}
-        EOF
+          echo ''
+          echo '[limits]'
+          echo 'max_event_bytes = ${{ inputs.max_event_bytes }}'
+          echo 'max_ws_message_bytes = ${{ inputs.max_ws_message_bytes }}'
+          echo 'max_ws_frame_bytes = ${{ inputs.max_ws_frame_bytes }}'
+          echo 'limit_scrapers = ${{ inputs.limit_scrapers }}'
 
-        # optional limits
-        [ -n "${{ inputs.messages_per_sec }}" ] && echo 'messages_per_sec = ${{ inputs.messages_per_sec }}' >> "$CFG"
-        [ -n "${{ inputs.subscriptions_per_min }}" ] && echo 'subscriptions_per_min = ${{ inputs.subscriptions_per_min }}' >> "$CFG"
+          [ -n "${{ inputs.messages_per_sec }}" ]      && echo 'messages_per_sec = ${{ inputs.messages_per_sec }}'
+          [ -n "${{ inputs.subscriptions_per_min }}" ] && echo 'subscriptions_per_min = ${{ inputs.subscriptions_per_min }}'
+          [ -n "${{ inputs.event_kind_blacklist }}" ]  && echo "event_kind_blacklist = [$(toml_array '${{ inputs.event_kind_blacklist }}')]"
+          [ -n "${{ inputs.event_kind_allowlist }}" ]  && echo "event_kind_allowlist = [$(toml_array '${{ inputs.event_kind_allowlist }}')]"
 
-        if [ -n "${{ inputs.event_kind_blacklist }}" ]; then
-          echo "event_kind_blacklist = [$(toml_array '${{ inputs.event_kind_blacklist }}')]" >> "$CFG"
-        fi
-        if [ -n "${{ inputs.event_kind_allowlist }}" ]; then
-          echo "event_kind_allowlist = [$(toml_array '${{ inputs.event_kind_allowlist }}')]" >> "$CFG"
-        fi
+          echo ''
+          echo '[authorization]'
+          echo 'nip42_auth = ${{ inputs.nip42_auth }}'
+          echo 'nip42_dms = ${{ inputs.nip42_dms }}'
 
-        cat >> "$CFG" <<EOF
+          [ -n "${{ inputs.pubkey_whitelist }}" ] && echo "pubkey_whitelist = [$(toml_array '${{ inputs.pubkey_whitelist }}')]"
 
-        [authorization]
-        nip42_auth = ${{ inputs.nip42_auth }}
-        nip42_dms = ${{ inputs.nip42_dms }}
-        EOF
+          echo ''
+          echo '[options]'
+          [ -n "${{ inputs.reject_future_seconds }}" ] && echo 'reject_future_seconds = ${{ inputs.reject_future_seconds }}'
+        } | tee "$CFG"
 
-        if [ -n "${{ inputs.pubkey_whitelist }}" ]; then
-          echo "pubkey_whitelist = [$(toml_array '${{ inputs.pubkey_whitelist }}')]" >> "$CFG"
-        fi
-
-        cat >> "$CFG" <<EOF
-
-        [options]
-        EOF
-        [ -n "${{ inputs.reject_future_seconds }}" ] && echo 'reject_future_seconds = ${{ inputs.reject_future_seconds }}' >> "$CFG"
+        echo "Generated config:"
+        cat "$CFG"
 
     - name: Start relay
       if: inputs.start == 'true'
       shell: bash
       run: |
+        echo Running nostr-rs-relay
         ~/.nostr-relay-bin/nostr-rs-relay \
           --config /tmp/nostr-relay-data/config.toml \
           &
