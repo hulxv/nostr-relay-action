@@ -20,6 +20,9 @@ jobs:
                   version: "0.9.0"
             - name: Verify relay is up on default port
               run: nc -z 127.0.0.1 8000 && echo "OK"
+            - name: Show relay logs on failure
+              if: failure()
+              run: cat /tmp/nostr-relay.log || true
 
     test-custom-port:
         name: Test custom port
@@ -34,6 +37,9 @@ jobs:
                   port: "7777"
             - name: Verify relay is up on custom port
               run: nc -z 127.0.0.1 7777 && echo "OK"
+            - name: Show relay logs on failure
+              if: failure()
+              run: cat /tmp/nostr-relay.log || true
 
     test-download-only:
         name: Test download without start
@@ -69,6 +75,9 @@ jobs:
                   grep "nip42_dms = true" /tmp/nostr-relay-data/config.toml && echo "nip42_dms OK"
             - name: Verify relay is up
               run: nc -z 127.0.0.1 8000 && echo "OK"
+            - name: Show relay logs on failure
+              if: failure()
+              run: cat /tmp/nostr-relay.log || true
 
     test-allowlist:
         name: Test event kind allowlist config
@@ -85,6 +94,9 @@ jobs:
               run: grep "event_kind_allowlist" /tmp/nostr-relay-data/config.toml && echo "allowlist OK"
             - name: Verify relay is up
               run: nc -z 127.0.0.1 8000 && echo "OK"
+            - name: Show relay logs on failure
+              if: failure()
+              run: cat /tmp/nostr-relay.log || true
 
     test-in-memory-off:
         name: Test persistent database
@@ -101,6 +113,9 @@ jobs:
               run: grep "in_memory = false" /tmp/nostr-relay-data/config.toml && echo "OK"
             - name: Verify relay is up
               run: nc -z 127.0.0.1 8000 && echo "OK"
+            - name: Show relay logs on failure
+              if: failure()
+              run: cat /tmp/nostr-relay.log || true
 
     test-config-generation:
         name: Test full config generation
@@ -129,3 +144,6 @@ jobs:
                   grep 'reject_future_seconds = 300' /tmp/nostr-relay-data/config.toml && echo "reject_future_seconds OK"
             - name: Verify relay is up on custom port
               run: nc -z 127.0.0.1 9000 && echo "OK"
+            - name: Show relay logs on failure
+              if: failure()
+              run: cat /tmp/nostr-relay.log || true

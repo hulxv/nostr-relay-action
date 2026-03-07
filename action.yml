@@ -1,4 +1,4 @@
-name: "Start nostr-rs-relay"
+name: "Nostr-rs Relay"
 description: "Downloads and starts a pre-built nostr-rs-relay"
 
 inputs:
@@ -131,7 +131,7 @@ runs:
         elif [ "$OS" = "darwin" ] && [ "$ARCH" = "arm64" ]; then
           echo "artifact=nostr-rs-relay-macos-aarch64" >> $GITHUB_OUTPUT
         else
-          echo "Unsupported platform: $OS/$ARCH" && exit 1
+          echo "Unsupported platform: $OS/$ARCH" && exit 2
         fi
 
     - name: Cache binary
@@ -215,19 +215,18 @@ runs:
           echo ''
           echo '[options]'
           [ -n "${{ inputs.reject_future_seconds }}" ] && echo 'reject_future_seconds = ${{ inputs.reject_future_seconds }}'
-        } | tee "$CFG"
+        } > "$CFG"
 
         echo "Generated config:"
-        cat "$CFG"
+        sed 's/^/  /' "$CFG"
 
     - name: Start relay
       if: inputs.start == 'true'
       shell: bash
       run: |
-        echo Running nostr-rs-relay
         ~/.nostr-relay-bin/nostr-rs-relay \
           --config /tmp/nostr-relay-data/config.toml \
-          &
+          > /tmp/nostr-relay.log 2>&1 &
         echo $! > /tmp/nostr-relay.pid
 
     - name: Wait for relay to be healthy
@@ -238,4 +237,6 @@ runs:
           nc -z 127.0.0.1 ${{ inputs.port }} && echo "Relay is up" && exit 0
           sleep 0.5
         done
-        echo "Relay failed to start" && exit 1
+        echo "Relay failed to start. Logs:"
+        cat /tmp/nostr-relay.log
+        exit 1
